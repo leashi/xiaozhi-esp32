@@ -110,6 +110,9 @@ public:
     void ResetDecoder();
     void SetModelsList(srmodel_list_t* models_list);
 
+    // add by lzq
+    bool PushPlayback(short *pcm, int len);
+
 private:
     AudioCodec* codec_ = nullptr;
     AudioServiceCallbacks callbacks_;

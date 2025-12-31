@@ -17,6 +17,9 @@
 #include "device_state.h"
 #include "device_state_machine.h"
 
+// add by lzq
+#include "tts_service.h"
+
 // Main event bits
 #define MAIN_EVENT_SCHEDULE             (1 << 0)
 #define MAIN_EVENT_SEND_AUDIO           (1 << 1)
@@ -120,6 +123,9 @@ public:
      */
     void ResetProtocol();
 
+    // add by lzq
+    TtsService& GetTtsService() { return m_tts_service; }
+
 private:
     Application();
     ~Application();
@@ -143,6 +149,8 @@ private:
     int clock_ticks_ = 0;
     TaskHandle_t activation_task_handle_ = nullptr;
 
+    // add by lzq
+    TtsService m_tts_service;
 
     // Event handlers
     void HandleStateChangedEvent();

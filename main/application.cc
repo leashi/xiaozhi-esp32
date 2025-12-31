@@ -47,6 +47,10 @@ Application::Application() {
 }
 
 Application::~Application() {
+    //add by lzq
+    m_tts_service.stop();
+    m_tts_service.fini();
+    
     if (clock_timer_handle_ != nullptr) {
         esp_timer_stop(clock_timer_handle_);
         esp_timer_delete(clock_timer_handle_);
@@ -72,6 +76,11 @@ void Application::Initialize() {
     auto codec = board.GetAudioCodec();
     audio_service_.Initialize(codec);
     audio_service_.Start();
+
+    // add by lzq
+    m_tts_service.set_audio_service(&audio_service_);
+    m_tts_service.init();
+    m_tts_service.start();
 
     AudioServiceCallbacks callbacks;
     callbacks.on_send_queue_available = [this]() {
@@ -876,6 +885,11 @@ void Application::SetListeningMode(ListeningMode mode) {
 
 void Application::Reboot() {
     ESP_LOGI(TAG, "Rebooting...");
+
+    //add by lzq
+    m_tts_service.stop();
+    m_tts_service.fini();
+
     // Disconnect the audio channel
     if (protocol_ && protocol_->IsAudioChannelOpened()) {
         protocol_->CloseAudioChannel();

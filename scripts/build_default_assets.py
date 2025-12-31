@@ -201,6 +201,24 @@ def process_sr_models(wakenet_model_dirs, multinet_model_dirs, build_dir, assets
         print(f"Error: Failed to generate srmodels.bin: {e}")
         return None
 
+# add by lzq
+def process_tts_models(esp_sr_component_path, assets_dir):
+    tts_model_file = "esp_tts_voice_data_xiaole.dat"
+    tts_model_path = os.path.join(esp_sr_component_path, "esp-tts", "esp_tts_chinese")
+
+    tts_src = os.path.join(tts_model_path, tts_model_file)
+    tts_dst = os.path.join(assets_dir, "xiaole.dat")
+
+    if os.path.exists(tts_src):
+        if copy_file(tts_src, tts_dst):
+            print(f"Added tts model file: {tts_dst}")
+            return True
+        pass
+    pass
+    
+    print(f"Error: tts model file not found: tts_src={tts_src}, tts_dst={tts_dst}")
+    return False
+
 
 def process_text_font(text_font_file, assets_dir):
     """Process text_font parameter"""
@@ -697,8 +715,8 @@ def get_emoji_collection_path(default_emoji_collection, xiaozhi_fonts_path):
         print(f"Warning: Emoji collection directory not found: {emoji_path}")
         return None
 
-
-def build_assets_integrated(wakenet_model_paths, multinet_model_paths, text_font_path, emoji_collection_path, extra_files_path, output_path, multinet_model_info=None):
+# mod by lzq
+def build_assets_integrated(esp_sr_component_path, wakenet_model_paths, multinet_model_paths, text_font_path, emoji_collection_path, extra_files_path, output_path, multinet_model_info=None):
     """
     Build assets using integrated functions (no external dependencies)
     """
@@ -721,6 +739,10 @@ def build_assets_integrated(wakenet_model_paths, multinet_model_paths, text_font
         emoji_collection = process_emoji_collection(emoji_collection_path, assets_dir) if emoji_collection_path else None
         extra_files = process_extra_files(extra_files_path, assets_dir) if extra_files_path else None
         
+        # mod by lzq
+        if esp_sr_component_path:
+            process_tts_models(esp_sr_component_path, assets_dir)
+
         # Generate index.json
         generate_index_json(assets_dir, srmodels, text_font, emoji_collection, extra_files, multinet_model_info)
         
@@ -757,6 +779,7 @@ def build_assets_integrated(wakenet_model_paths, multinet_model_paths, text_font
         # Clean up temporary directory
         if os.path.exists(temp_build_dir):
             shutil.rmtree(temp_build_dir)
+        pass
 
 
 def main():
@@ -868,8 +891,11 @@ def main():
         print(f"Created empty assets.bin: {args.output}")
         return
     
-    # Build the assets
-    success = build_assets_integrated(wakenet_model_paths, multinet_model_paths, text_font_path, emoji_collection_path, 
+    # add by lzq
+    esp_sr_component_path = os.path.dirname(args.esp_sr_model_path) if args.esp_sr_model_path else None
+    
+    # Build the assets, mod by lzq
+    success = build_assets_integrated(esp_sr_component_path, wakenet_model_paths, multinet_model_paths, text_font_path, emoji_collection_path, 
                                      extra_files_path, args.output, multinet_model_info)
     
     if not success:

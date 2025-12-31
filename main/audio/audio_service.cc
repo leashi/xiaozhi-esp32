@@ -311,10 +311,13 @@ void AudioService::OpusCodecTask() {
             audio_queue_cv_.notify_all();
             lock.unlock();
 
+            //从网络获取的音频包进行解码
             auto task = std::make_unique<AudioTask>();
             task->type = kAudioTaskTypeDecodeToPlaybackQueue;
             task->timestamp = packet->timestamp;
 
+            //add by lzq
+            lock.lock();
             SetDecodeSampleRate(packet->sample_rate, packet->frame_duration);
             if (opus_decoder_->Decode(std::move(packet->payload), task->pcm)) {
                 // Resample if the sample rate is different
@@ -324,14 +327,14 @@ void AudioService::OpusCodecTask() {
                     output_resampler_.Process(task->pcm.data(), task->pcm.size(), resampled.data());
                     task->pcm = std::move(resampled);
                 }
-
-                lock.lock();
+                
                 audio_playback_queue_.push_back(std::move(task));
                 audio_queue_cv_.notify_all();
             } else {
                 ESP_LOGE(TAG, "Failed to decode audio");
                 lock.lock();
-            }
+            }            
+            
             debug_statistics_.decode_count++;
         }
         
@@ -683,4 +686,29 @@ bool AudioService::IsAfeWakeWord() {
 #else
     return false;
 #endif
+}
+
+// add by lzq
+bool AudioService::PushPlayback(short *pcm, int len) {
+    std::unique_ptr<AudioTask> task = std::make_unique<AudioTask>();
+    task->type = kAudioTaskTypeDecodeToPlaybackQueue;
+    task->timestamp = 0;
+    task->pcm.assign(pcm, pcm + len);
+
+    std::unique_lock<std::mutex> lock(audio_queue_mutex_);
+
+    // Resample if the sample rate is different
+    if (16000 != codec_->output_sample_rate()) {
+        auto codec = Board::GetInstance().GetAudioCodec();
+        output_resampler_.Configure(16000, codec->output_sample_rate());
+
+        int target_size = output_resampler_.GetOutputSamples(task->pcm.size());
+        std::vector<int16_t> resampled(target_size);
+        output_resampler_.Process(task->pcm.data(), task->pcm.size(), resampled.data());
+        task->pcm = std::move(resampled);
+    }
+    
+    audio_playback_queue_.push_back(std::move(task));
+    audio_queue_cv_.notify_all();    
+    return true;
 }
